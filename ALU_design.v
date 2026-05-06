@@ -163,6 +163,8 @@ module ALU #(
                         else
                             err <= 1; // Set error if inputs are not valid
                     end
+                    default:
+                        err <= 1; // Set error for invalid command
                endcase 
             end
             else begin
@@ -260,6 +262,8 @@ module ALU #(
                         else
                             err <= 1; // Set error if inputs are not valid
                     end
+                    default :
+                        err <= 1; // Set error for invalid command
                 endcase
             end
         end
