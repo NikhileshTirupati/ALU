@@ -14,7 +14,6 @@ module ALU #(
     reg start,done;
     reg [WIDTH-1:0] temp_a, temp_b;
     reg [CMD_WIDTH-1:0] prev_cmd;
-  	reg of;
     
     //gated clk
     assign clk_new = clk & ce;
@@ -57,7 +56,7 @@ module ALU #(
                     0: begin // Addition
                         if(inp_valid==2'b11) begin
                             res <= op_a + op_b;
-                          cout<= res[WIDTH];
+                          cout<= |res[2*WIDTH-1:WIDTH];
                         end
                         else
                             err <= 1; // Set error if inputs are not valid
@@ -73,7 +72,7 @@ module ALU #(
                     2: begin // Addition with carry
                         if(inp_valid==2'b11) begin
                             res <= op_a + op_b + cin;
-                            cout<=res[WIDTH];
+                          cout<= |res[2*WIDTH-1:WIDTH];
                         end
                         else err <= 1; // Set error if inputs are not valid
                     end
@@ -152,16 +151,14 @@ module ALU #(
                     11: begin // Signed addition
                         if (inp_valid==2'b11) begin
                             res <= $signed(op_a) + $signed(op_b);
-                            {g,l,e} <= ($signed(op_a) == $signed(op_b)) ? 3'b001 : ($signed(op_a) > $signed(op_b)) ? 3'b100 : 3'b010;
-                          oflow<=of;
+                            {g,l,e} <= ($signed(op_a) == $signed(op_b)) ? 3'b001 : ($signed(op_a) > $signed(op_b)) ? 3'b100 : 3'b010; 
                         end
                         else err <= 1; // Set error if inputs are not valid
                     end
                     12: begin // Signed subtraction
                         if (inp_valid==2'b11) begin
                             res <= $signed(op_a) - $signed(op_b);
-                            {g,l,e} <= ($signed(op_a) == $signed(op_b)) ? 3'b001 : ($signed(op_a) > $signed(op_b)) ? 3'b100 : 3'b010;
-                          oflow<=of;
+                            {g,l,e} <= ($signed(op_a) == $signed(op_b)) ? 3'b001 : ($signed(op_a) > $signed(op_b)) ? 3'b100 : 3'b010; 
                         end
                         else
                             err <= 1; // Set error if inputs are not valid
@@ -210,41 +207,55 @@ module ALU #(
                             err <= 1; // Set error if input B is not valid  
                     end
                     8: begin // Right Shift A
-                        if(inp_valid[0]) res[WIDTH-1:0] <= op_a >> 1;
+                      if(inp_valid[0]) begin 
+                          res[WIDTH-1:0] <= op_a >> 1;
+                        res[2*WIDTH-1:WIDTH] <= 0;
+                      end
                         else
                             err <= 1; // Set error if input A is not valid
                     end
                     9: begin // Left Shift A
-                        if(inp_valid[0]) res[WIDTH-1:0] <= op_a << 1;
+                      if(inp_valid[0]) begin
+                        res[WIDTH-1:0] <= op_a << 1;
+                        res[2*WIDTH-1:WIDTH] <= 0;
+                      end
                         else
                             err <= 1; // Set error if input A is not valid
                     end
                     10: begin // Right Shift B
-                        if(inp_valid[1]) res[WIDTH-1:0] <= op_b >> 1;
+                      if(inp_valid[1]) begin
+                        res[WIDTH-1:0] <= op_b >> 1;
+                        res[2*WIDTH-1:WIDTH] <= 0;
+                      end
                         else
                             err <= 1; // Set error if input B is not valid
                     end
                     11: begin // Left Shift B
-                        if(inp_valid[1]) res[WIDTH-1:0] <= op_b << 1;
+                      if(inp_valid[1]) begin
+                            res[WIDTH-1:0] <= op_b << 1;
+                            res[2*WIDTH-1:WIDTH] <= 0;
+                      end
                         else
                             err <= 1; // Set error if input B is not valid
                     end
                     12: begin // Rotate Left A, B times
                         if (inp_valid==2'b11) begin
-                            res[WIDTH-1:0] <= op_a << op_b[$clog2(WIDTH)-1:0]|op_a >> (WIDTH - op_b[$clog2(WIDTH)-1:0]);
+                            res[WIDTH-1:0] <= op_a >> op_b[$clog2(WIDTH)-1:0]|op_a << (WIDTH - op_b[$clog2(WIDTH)-1:0]);
                             if (|op_b[WIDTH-1:$clog2(WIDTH)+1]) begin
                                 err <= 1;
                             end
+                            res[2*WIDTH-1:WIDTH] <= 0;
                         end
                         else
                             err <= 1; // Set error if inputs are not valid
                     end
                     13: begin // Rotate Right A, B times
                         if(inp_valid==2'b11) begin
-                            res[WIDTH-1:0] <= op_a >> op_b[$clog2(WIDTH)-1:0]|op_a << (WIDTH - op_b[$clog2(WIDTH)-1:0]);
+                            res[WIDTH-1:0] <= op_a << op_b[$clog2(WIDTH)-1:0]|op_a >> (WIDTH - op_b[$clog2(WIDTH)-1:0]);
                             if (|op_b[WIDTH-1:$clog2(WIDTH)+1]) begin
                                 err <= 1;
                             end
+                            res[2*WIDTH-1:WIDTH] <= 0;
                         end
                         else
                             err <= 1; // Set error if inputs are not valid
@@ -256,14 +267,11 @@ module ALU #(
 
     // Combinational logic for overflow detection
     always @( *) begin
-        if(mode && (cmd == 11)) begin
-            of <= (op_a[WIDTH-1] == op_b[WIDTH-1]) && (res[WIDTH-1] != op_a[WIDTH-1]); 
+        if(mode && (cmd == 11||cmd == 12)) begin
+            oflow <= (op_a[WIDTH-1] == op_b[WIDTH-1]) && (res[WIDTH-1] != op_a[WIDTH-1]); 
         end
-      else if(mode && (cmd == 12)) begin
-        of <= (op_a[WIDTH-1] != op_b[WIDTH-1]) && (res[WIDTH-1] != op_a[WIDTH-1]);
-      end
         else
-            of <= 0;
+            oflow <= 0;
     end
     
 endmodule //ALU
