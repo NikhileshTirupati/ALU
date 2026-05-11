@@ -253,7 +253,7 @@ module ALU #(
                     end
                     8: begin // Right Shift A
                         if(inp_valid[0]) begin 
-                            res[WIDTH-1:0] <= op_a >> 1
+                            res[WIDTH-1:0] <= op_a >> 1;
                             res[2*WIDTH-1:WIDTH] <= 0;
                         end
                         else
